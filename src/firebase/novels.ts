@@ -4,16 +4,12 @@ import {
   getDoc,
   getDocs,
   query,
-  where,
   orderBy,
   limit,
-  startAfter,
   runTransaction,
-  addDoc,
   serverTimestamp,
   DocumentSnapshot,
   QueryDocumentSnapshot,
-  QueryConstraint,
 } from 'firebase/firestore'
 import { db } from './config'
 import type { Novel, Rating, Review } from '@/types'
@@ -32,26 +28,26 @@ export interface GetNovelsOptions {
   status?: string
   sortBy?: 'avgRating' | 'reviewCount' | 'addedAt'
   pageSize?: number
-  afterDoc?: QueryDocumentSnapshot | null
 }
 
+// Fetches all novels and filters/sorts client-side.
+// This avoids Firestore composite index requirements for compound queries.
+// Fine for small datasets; for large ones, create indexes via Firebase Console.
 export async function getNovels(options: GetNovelsOptions = {}): Promise<{
   novels: Novel[]
-  lastDoc: QueryDocumentSnapshot | null
+  lastDoc: null
 }> {
-  const { genre, status, sortBy = 'avgRating', pageSize = 24, afterDoc } = options
-  const constraints: QueryConstraint[] = []
+  const { genre, status, sortBy = 'avgRating', pageSize = 24 } = options
 
-  if (genre) constraints.push(where('genres', 'array-contains', genre))
-  if (status) constraints.push(where('status', '==', status))
-  constraints.push(orderBy(sortBy, 'desc'))
-  if (afterDoc) constraints.push(startAfter(afterDoc))
-  constraints.push(limit(pageSize))
+  // Fetch all novels ordered by the sort field (single-field index, always available)
+  const snap = await getDocs(query(novelsCol, orderBy(sortBy, 'desc')))
+  let novels = snap.docs.map(novelFromDoc)
 
-  const snap = await getDocs(query(novelsCol, ...constraints))
-  const novels = snap.docs.map(novelFromDoc)
-  const lastDoc = snap.docs[snap.docs.length - 1] ?? null
-  return { novels, lastDoc }
+  // Client-side filtering
+  if (genre) novels = novels.filter((n) => n.genres.includes(genre))
+  if (status) novels = novels.filter((n) => n.status === status)
+
+  return { novels: novels.slice(0, pageSize), lastDoc: null }
 }
 
 export async function getTopNovels(count = 10): Promise<Novel[]> {

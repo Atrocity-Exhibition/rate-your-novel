@@ -11,7 +11,6 @@ export default function Browse() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [novels, setNovels] = useState<Novel[]>([])
   const [loading, setLoading] = useState(true)
-  const [hasMore, setHasMore] = useState(false)
 
   const genre = searchParams.get('genre') || ''
   const status = searchParams.get('status') || ''
@@ -20,10 +19,9 @@ export default function Browse() {
 
   const loadNovels = useCallback(async () => {
     setLoading(true)
-    const { novels: data, lastDoc } = await getNovels({ genre: genre || undefined, status: status || undefined, sortBy: sort, pageSize: 24 })
+    const { novels: data } = await getNovels({ genre: genre || undefined, status: status || undefined, sortBy: sort, pageSize: 24 })
     const filtered = q ? data.filter((n) => n.title.toLowerCase().includes(q.toLowerCase()) || n.author.toLowerCase().includes(q.toLowerCase())) : data
     setNovels(filtered)
-    setHasMore(lastDoc !== null && filtered.length === 24)
     setLoading(false)
   }, [genre, status, sort, q])
 
@@ -172,7 +170,6 @@ export default function Browse() {
                 </div>
                 <p className="mt-6 text-center text-sm text-neutral-500">
                   Showing {novels.length} novel{novels.length !== 1 ? 's' : ''}
-                  {hasMore && ' • More available'}
                 </p>
               </>
             )}

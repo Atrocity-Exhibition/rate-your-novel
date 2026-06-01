@@ -11,7 +11,7 @@ import UserProfile from '@/pages/UserProfile'
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Auth pages — no navbar */}
           <Route path="/login" element={<Login />} />
